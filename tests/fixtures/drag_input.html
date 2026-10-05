@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>自有滑块输入测试</title>
+<style>
+  body { margin: 32px; font: 18px sans-serif; color: #17362d; background: #f2f7f5; }
+  main { width: 640px; }
+  #slider { width: 560px; height: 48px; margin: 24px 0; accent-color: #16755c; }
+  output { display: block; margin: 8px 0; }
+  input:not([type=range]), textarea, #editable { display: block; width: 520px; margin: 8px 0;
+    padding: 8px; font: 18px sans-serif; border: 1px solid #668c7c; background: white; }
+  textarea { height: 58px; }
+  #editable { min-height: 30px; }
+  #pad { position: absolute; left: 720px; top: 144px; width: 400px; height: 260px;
+    background: #d5ece2; border: 2px solid #16755c; display: grid; place-items: center; }
+  #pad:hover { background: #b6dfcb; }
+  #action { position: absolute; left: 720px; top: 440px; width: 404px; height: 56px; }
+  #action-result { position: absolute; left: 720px; top: 508px; }
+  #child { position: absolute; left: 720px; top: 576px; width: 400px; height: 152px; }
+  #revision { font-size: 12px; }
+</style>
+<main>
+  <h1>自有滑块输入测试</h1>
+  <p>这是输入事件测试，不是身份验证，不请求外部资源。</p>
+  <p>将滑块拖到右端。评测检查位置以及按下、按住移动、松开的事件。</p>
+  <input id="slider" type="range" min="0" max="100" value="0" aria-label="测试滑块">
+  <output id="position">位置：0</output>
+  <output id="result">等待操作</output>
+  <input id="field" autocomplete="off" aria-label="普通文本">
+  <input id="second" autocomplete="off" aria-label="第二输入框">
+  <input id="password" type="password" autocomplete="off" aria-label="密码输入">
+  <textarea id="multiline" aria-label="多行文本"></textarea>
+  <div id="editable" contenteditable="true" aria-label="可编辑文本"></div>
+  <output id="revision">重置：0</output>
+</main>
+<div id="pad" tabindex="0">鼠标、修饰键、滚轮事件记录区</div>
+<button id="action" type="button">不能被取消动作误触的按钮</button>
+<output id="action-result">点击：0</output>
+<iframe id="child" title="自有嵌入输入测试" srcdoc="<!doctype html><meta charset=utf-8><style>button{margin:16px;width:350px;height:56px;font:18px sans-serif}</style><button id=frame-action type=button>嵌入页面取消误触测试</button>"></iframe>
+<script>
+  const slider = document.getElementById('slider');
+  let events = [], active = false, heldMoves = 0, downSeen = false, upSeen = false, heldPoint = null;
+  let passed = false, revision = 0, mouseEvents = [], wheelEvents = [], keyEvents = [], actionCount = 0;
+  let frameMouseEvents = [], frameActionCount = 0;
+  function reset() {
+    events = []; active = false; heldMoves = 0; downSeen = false; upSeen = false; heldPoint = null;
+    mouseEvents = []; wheelEvents = []; keyEvents = [];
+    actionCount = 0; document.getElementById('action-result').textContent = '点击：0';
+    frameMouseEvents = []; frameActionCount = 0;
+    passed = false; slider.value = '0';
+    for (const id of ['field', 'second', 'password', 'multiline']) document.getElementById(id).value = '';
+    document.getElementById('editable').textContent = '';
+    document.getElementById('position').textContent = '位置：0';
+    document.getElementById('result').textContent = '等待操作';
+    document.getElementById('revision').textContent = '重置：' + (++revision);
+  }
+  for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
+    document.addEventListener(type, event => {
+      if (event.target !== slider && !active) return;
+      events.push({type, x: event.clientX, y: event.clientY, buttons: event.buttons});
+      if (type === 'pointerdown' && event.button === 0) {
+        active = true; downSeen = true; heldPoint = {x: event.clientX, y: event.clientY};
+      } else if (type === 'pointermove' && active && (event.buttons & 1)) {
+        if (Math.hypot(event.clientX - heldPoint.x, event.clientY - heldPoint.y) > 0.5) heldMoves += 1;
+        heldPoint = {x: event.clientX, y: event.clientY};
+      } else if (type === 'pointerup') {
+        upSeen = active; active = false;
+        passed = downSeen && upSeen && heldMoves > 0 && Number(slider.value) >= 99;
+        document.getElementById('result').textContent = passed ? '输入事件完整' : '输入事件不完整或未到终点';
+      } else if (type === 'pointercancel') {
+        active = false; passed = false;
+      }
+    }, true);
+  }
+  slider.addEventListener('input', () => {
+    document.getElementById('position').textContent = '位置：' + slider.value;
+  });
+  for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'click', 'dblclick', 'contextmenu', 'auxclick']) {
+    document.addEventListener(type, event => {
+      mouseEvents.push({type, target: event.target.id, x: event.clientX, y: event.clientY,
+        button: event.button, buttons: event.buttons, detail: event.detail,
+        shift: event.shiftKey, control: event.ctrlKey, meta: event.metaKey, alt: event.altKey});
+      if (type === 'contextmenu' || type === 'auxclick') event.preventDefault();
+    }, true);
+  }
+  document.getElementById('pad').addEventListener('wheel', event => {
+    wheelEvents.push({dx: event.deltaX, dy: event.deltaY, mode: event.deltaMode,
+      shift: event.shiftKey, control: event.ctrlKey, meta: event.metaKey, alt: event.altKey});
+    event.preventDefault();
+  }, {passive: false});
+  document.addEventListener('keydown', event => keyEvents.push({key: event.key, code: event.code,
+    target: event.target.id, shift: event.shiftKey, control: event.ctrlKey,
+    meta: event.metaKey, alt: event.altKey}), true);
+  document.getElementById('action').addEventListener('click', () => {
+    document.getElementById('action-result').textContent = '点击：' + (++actionCount);
+  });
+  document.getElementById('child').addEventListener('load', event => {
+    const button = event.target.contentDocument.getElementById('frame-action');
+    for (const type of ['pointerdown', 'pointerup', 'click']) button.addEventListener(type, value => {
+      frameMouseEvents.push({type, buttons: value.buttons});
+      if (type === 'click') frameActionCount += 1;
+    });
+  });
+  window.dragFixture = {
+    reset,
+    snapshot: () => ({value: Number(slider.value), passed, downSeen, upSeen, heldMoves, active, events,
+      mouseEvents, wheelEvents, keyEvents, actionCount, frameMouseEvents, frameActionCount,
+      field: document.getElementById('field').value,
+      second: document.getElementById('second').value, password: document.getElementById('password').value,
+      multiline: document.getElementById('multiline').value,
+      editable: document.getElementById('editable').textContent,
+      focused: document.activeElement.id})
+  };
+</script>
+</html>

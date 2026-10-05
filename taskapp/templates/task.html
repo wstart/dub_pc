@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf }}"><meta name="task-token" content="{{ token }}">
+  {% if admin_browser %}<meta name="admin-task-id" content="{{ task.id }}">{% endif %}
+  <title>{{ task.title }} · Taskroom</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="session-page" data-page="{{ 'admin-browser' if admin_browser else 'task' }}">
+<header class="session-header">
+  <span class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/></svg></span><span class="brand-name">TASKROOM</span></span>
+  <div class="session-title"><h1 title="{{ task.title }}">{{ task.title }}</h1><span id="task-state" class="session-state" role="status">正在连接</span>{% if admin_browser %}<span class="session-kind">管理员</span>{% endif %}</div>
+  <div class="session-actions">
+    <details id="task-details" class="session-details">
+      <summary>任务说明<span aria-hidden="true">⌄</span></summary>
+      <div class="session-info">
+        <p class="eyebrow">{{ '管理员浏览器' if admin_browser else '专属浏览器' }} / {{ task.code }}</p>
+        <h2>{{ task.title }}</h2><p id="status" class="hint" role="status">正在连接任务…</p>
+        {% if admin_browser %}<p id="admin-mode" class="hint" role="status">正在确认浏览器权限…</p>{% endif %}
+        <section><h3>操作提示</h3><p>画面支持点击、双击、右键、拖拽与滚轮。点击画面后可使用键盘；中文或长文本建议用下方文字输入栏发送。点击标签切换网页，点击 × 关闭标签；关闭最后一个标签会保留空白页，不关闭环境。系统文件对话框、下载及音视频暂不支持。</p></section>
+        <section><h3>{{ '观察与接管' if admin_browser else '权限与隐私' }}</h3><p>{% if admin_browser %}用户操作期间仅允许观察；「结束观察」不会中断用户。用户完成后，管理员可继续操作原环境。关闭管理员浏览器会保留环境和登录数据。请勿在其他设备同时打开同一环境。{% else %}完成任务后立即锁定操作；管理员重新开放后，请刷新原链接继续操作。标签关闭不会清除 Cookie 或登录数据。{% endif %}</p></section>
+      </div>
+    </details>
+    <button id="submit" class="{{ 'quiet' if admin_browser else 'primary' }}" disabled>{{ '结束观察' if admin_browser else '完成任务 ✓' }}</button>
+  </div>
+</header>
+<main class="workspace">
+  <section class="browser-shell" aria-label="远程浏览器">
+    <div class="browser-topbar">
+      <div id="tabs" class="tabs" role="tablist" aria-label="浏览器标签页"></div>
+      <span id="connection-badge" class="connection-badge" data-mode="waiting" role="status"><span class="connection-led" aria-hidden="true"></span><span id="connection-state">等待连接</span></span>
+    </div>
+    <div class="toolbar">
+      <div class="navigation-buttons">
+        <button id="back" type="button" class="quiet icon-button" title="后退" aria-label="后退" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg></button>
+        <button id="reload" type="button" class="quiet icon-button" title="刷新" aria-label="刷新当前网页" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 8a8 8 0 1 0 .2 7M20 3v5h-5"/></svg></button>
+      </div>
+      <form id="navigate">
+        <div class="address-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c4 4 4 12 0 16-4-4-4-12 0-16"/></svg><input id="address" type="url" placeholder="输入网址，例如 https://example.com" aria-label="网页地址" autocomplete="off" spellcheck="false" required disabled></div>
+        <button type="submit" class="quiet" disabled>前往<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button>
+      </form>
+      <button id="new-tab" type="button" class="quiet icon-button" title="新建标签页" aria-label="新建标签页" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    <details id="network-alert" class="network-alert" data-level="warning" hidden>
+      <summary><span class="network-alert-mark" aria-hidden="true">!</span><span id="network-message" role="status" aria-live="polite"></span><span id="network-count" class="network-count"></span><span class="network-disclosure">详情 ⌄</span></summary>
+      <div class="network-details"><p>操作者可使用地址栏左侧的刷新按钮。系统不会自动刷新或重试；这些错误不代表任务已经失败。</p><ul id="network-errors"></ul><p id="network-limit" hidden>仅展示部分错误，记录上限为 50 项。刷新或进入新页面后重新统计。</p></div>
+    </details>
+    <div class="viewport">
+      <img id="screen" width="1280" height="800" alt="远程浏览器画面" tabindex="0" draggable="false">
+      <div id="overlay" class="overlay"><div>
+        <div class="overlay-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="14" rx="3"/><path d="M8 21h8M12 18v3M3 8h18"/></svg></div>
+        <p class="eyebrow">SESSION STATUS</p><h2 id="overlay-title">正在准备浏览器</h2><p id="overlay-message">连接就绪后，即可开始这次任务。</p><button id="claim" hidden>开始操作 →</button>
+      </div></div>
+    </div>
+  </section>
+  <div class="input-bar">
+    <form id="text-input">
+      <label for="remote-text">文字输入<small>中文 / 长文本 / 粘贴</small></label>
+      <input id="remote-text" placeholder="先点击网页中的输入框，再在这里输入文字" autocomplete="off" disabled>
+      <div id="input-actions" class="input-actions"><button type="submit" class="quiet" disabled>发送到浏览器</button></div>
+    </form>
+  </div>
+  <p id="notice" role="status" class="notice" hidden></p>
+</main>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

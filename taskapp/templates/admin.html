@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="csrf-token" content="{{ csrf }}"><title>任务控制台 · AdsPower</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body data-page="admin">
+<header><a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/></svg></span><span class="brand-name">TASKROOM<small>BROWSER TASK CONTROL</small></span></a><span class="header-note">独立环境 · 有序协作 · 完成后锁定</span></header>
+<main>
+{% if not admin %}
+<section class="login panel"><p class="eyebrow">ADMIN ACCESS / 管理员入口</p><h1>欢迎回到工作台。</h1><p class="muted">创建独立浏览器环境，分配任务，并在需要时接管操作。</p>
+<form id="login"><label>管理密码<input name="password" type="password" autocomplete="current-password" required></label><button>进入控制台 →</button></form></section>
+{% else %}
+<div class="intro"><div><p class="eyebrow">BROWSER TASKS / CONTROL DESK</p><h1>浏览器任务工作台</h1><p class="muted">管理每一段独立会话，从分配任务到完成后接管。</p></div><button class="quiet" id="logout">退出登录</button></div>
+<div class="dashboard"><section class="panel create-panel"><div class="panel-heading"><span class="panel-index" aria-hidden="true">01</span><div><p class="eyebrow">NEW SESSION</p><h2>创建任务</h2></div></div>
+<form id="create"><label>任务名称<input name="title" maxlength="100" placeholder="例如：完成网站设置" required></label>
+<label>操作起始网址<input name="start_url" type="url" placeholder="https://example.com" required></label>
+<label>有效期（分钟）<input name="lifetime_minutes" type="number" min="5" max="1440" value="60" required></label>
+<div class="proxy-config"><label>浏览器代理<input name="proxy" maxlength="2048" placeholder="直接粘贴整条代理，留空则直连" autocomplete="off" spellcheck="false"></label>
+<p class="hint">自动识别地址、端口和账号密码，无需拆开填写。当前 HTTP 管理页不加密传输；认证信息不回显、不写入任务记录。</p></div>
+<p class="hint form-note">新任务使用 Mac 桌面指纹 · Chrome 152；已有环境不变。用户提交后立即锁定，管理员可接管或重新开放。</p>
+<button id="create-button">创建浏览器任务 ＋</button></form></section>
+<section class="task-list"><div class="list-heading"><div><p class="eyebrow">SESSION OVERVIEW</p><h2>任务记录</h2></div><span id="count" class="count-pill">正在加载</span></div><div id="tasks"><p class="muted">正在加载…</p></div></section></div>
+{% endif %}
+<p id="notice" role="status" class="notice" hidden></p>
+</main><script src="{{ url_for('static', filename='app.js') }}"></script></body></html>
